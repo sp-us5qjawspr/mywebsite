@@ -10,9 +10,10 @@ function color(km){return km>10000?'#ff405d':km>=6000?'#ff9b2f':km>=3000?'#f7e04
 function setupMap(){
  if(map||!window.L)return;
  map=L.map('map',{worldCopyJump:true,preferCanvas:true,zoomSnap:.5}).setView([32,15],2.5);
- L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',{
-  attribution:'© OpenStreetMap contributors · HOT',maxZoom:12
- }).addTo(map);
+ const satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles © Esri, Maxar, Earthstar Geographics and contributors',maxZoom:12});
+ const street=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:12});
+ satellite.addTo(map);
+ L.control.layers({'Спутник':satellite,'Обычная карта':street},null,{position:'topleft',collapsed:true}).addTo(map);
  paths=L.layerGroup().addTo(map);stations=L.layerGroup().addTo(map);
  setTimeout(()=>map.invalidateSize(),100);
 }
@@ -60,7 +61,9 @@ function graph(id,type,labels,values,label){
 function render(){
  if(!source)return;charts.forEach(c=>c.destroy());charts=[];setupMap();
  const hours=$('period').value,band=$('band').value,minimum=Number($('distance').value);
- const spots=(source.windows?.[hours]||[]).filter(s=>Number(s.distance)>=minimum&&(band==='all'||Number(s.band)===Number(band)));
+ const checkedBands=[...document.querySelectorAll('.band-checkbox:checked')].map(el=>Number(el.value));
+ const filterByCheckbox=!$('allBandsCheck').checked;
+ const spots=(source.windows?.[hours]||[]).filter(s=>Number(s.distance)>=minimum&&(filterByCheckbox?checkedBands.includes(Number(s.band)):(band==='all'||Number(s.band)===Number(band))));
  const unique=new Map();for(const s of spots){const key=String(s.rx_sign)+'|'+String(s.rx_loc);if(!unique.has(key)||Number(s.distance)>Number(unique.get(key).distance))unique.set(key,s)}
  const ranked=[...unique.values()].sort((a,b)=>Number(b.distance)-Number(a.distance));
  const best=ranked[0];
@@ -97,3 +100,23 @@ $('reload').addEventListener('click',()=>location.reload());window.addEventListe
   else document.getElementById('copySiteLink')?.click();
  });
 })();
+
+// Sidebar band filters. Existing dropdown remains available for one-band selection.
+const allBandsCheck=document.getElementById('allBandsCheck');
+const bandChecks=[...document.querySelectorAll('.band-checkbox')];
+allBandsCheck?.addEventListener('change',()=>{
+ if(allBandsCheck.checked){bandChecks.forEach(c=>c.checked=false);document.getElementById('band').value='all';}
+ else{bandChecks.forEach(c=>c.checked=true);document.getElementById('band').value='all';}
+ render();
+});
+bandChecks.forEach(c=>c.addEventListener('change',()=>{
+ allBandsCheck.checked=false;
+ if(bandChecks.every(x=>x.checked)||bandChecks.every(x=>!x.checked)){
+  allBandsCheck.checked=true;bandChecks.forEach(x=>x.checked=false);
+ }
+ document.getElementById('band').value='all';render();
+}));
+document.getElementById('band').addEventListener('change',e=>{
+ allBandsCheck.checked=e.target.value==='all';
+ bandChecks.forEach(c=>c.checked=!allBandsCheck.checked&&c.value===e.target.value);
+});
