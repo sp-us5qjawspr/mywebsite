@@ -1,6 +1,17 @@
-Исправление флагов стран SP/US5QJA:
-В таблицах справа отображаются изображения флагов (не эмодзи, которые в Windows могут показываться как AU/NA/ES) и названия стран.
-На карте флагов нет. Свой позывной SP/US5QJA не меняется.
-Флаги загружаются с flagcdn.com; для их отображения нужен доступ к этому сервису.
-Замените index.html, app.js и style.css в GitHub, затем Commit changes.
-Автоматизацию и данные не удаляйте.
+SP/US5QJA WSPR Monitor — переключение вида карты
+
+Добавлены кнопки в правом верхнем углу карты:
+  Спутник — Esri World Imagery
+  Карта — OpenStreetMap
+  Рельеф — Esri World Topo Map
+
+Сохраняются WSPR-линии, точки, позывные, фильтры, графики и флаги в таблицах.
+
+Загрузите в корень репозитория airbuss09/mywebsite:
+  index.html
+  app.js
+  style.css
+
+Не удаляйте update.py, .github/workflows, data/ и qr-site.png.
+После Commit changes дождитесь успешного GitHub Actions и обновите сайт Ctrl+Shift+R.
+Карты требуют подключения к интернету и доступности Esri/OpenStreetMap.

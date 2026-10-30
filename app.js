@@ -47,10 +47,44 @@ function color(km){return km>10000?'#ff405d':km>=6000?'#ff9b2f':km>=3000?'#f7e04
 function setupMap(){
  if(map||!window.L)return;
  map=L.map('map',{worldCopyJump:true,preferCanvas:true,zoomSnap:.5}).setView([32,15],2.5);
- const satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles © Esri, Maxar, Earthstar Geographics and contributors',maxZoom:12});
- const street=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:12});
- satellite.addTo(map);
- L.control.layers({'Спутник':satellite,'Обычная карта':street},null,{position:'topleft',collapsed:true}).addTo(map);
+ const baseMaps={
+  satellite:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Imagery © Esri, Maxar, Earthstar Geographics and contributors',maxZoom:12}),
+  street:L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:12}),
+  terrain:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',{attribution:'Topo © Esri and contributors',maxZoom:12})
+ };
+ let currentBase=baseMaps.satellite;
+ currentBase.addTo(map);
+ // Visible Google-Maps-style base map switcher; propagation overlays stay intact.
+ const ViewSwitcher=L.Control.extend({
+  options:{position:'topright'},
+  onAdd:function(){
+   const container=L.DomUtil.create('div','wspr-map-views leaflet-bar');
+   container.setAttribute('role','group');
+   container.setAttribute('aria-label','Вид карты');
+   const options=[['satellite','Спутник'],['street','Карта'],['terrain','Рельеф']];
+   options.forEach(([key,label])=>{
+    const btn=L.DomUtil.create('button','wspr-map-view-btn',container);
+    btn.type='button';btn.textContent=label;btn.title='Показать: '+label.toLowerCase();
+    btn.setAttribute('aria-pressed',key==='satellite'?'true':'false');
+    btn.classList.toggle('active',key==='satellite');
+    L.DomEvent.on(btn,'click',e=>{
+     L.DomEvent.stop(e);
+     if(currentBase!==baseMaps[key]){
+      map.removeLayer(currentBase);currentBase=baseMaps[key];currentBase.addTo(map);
+      currentBase.bringToBack();
+     }
+     container.querySelectorAll('button').forEach(b=>{
+      const selected=b===btn;b.classList.toggle('active',selected);
+      b.setAttribute('aria-pressed',String(selected));
+     });
+    });
+   });
+   L.DomEvent.disableClickPropagation(container);
+   L.DomEvent.disableScrollPropagation(container);
+   return container;
+  }
+ });
+ map.addControl(new ViewSwitcher());
  paths=L.layerGroup().addTo(map);stations=L.layerGroup().addTo(map);
  setTimeout(()=>map.invalidateSize(),100);
 }
