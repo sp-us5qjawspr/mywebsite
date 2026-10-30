@@ -36,7 +36,14 @@ function countryCode(call){
  const candidate=(parts.length>1&&parts[0].length<=4)?parts[0]:parts[0]||'';
  const match=PREFIX_FLAGS.find(([p])=>candidate.startsWith(p));return match?match[1]:null;
 }
-function flag(call){const code=countryCode(call);if(!code)return '🌐';return [...code].map(ch=>String.fromCodePoint(127397+ch.charCodeAt(0))).join('')}
+// Country names and PNG flags are shown only in the rightmost country column.
+const countryNames=new Intl.DisplayNames(['ru'],{type:'region'});
+function countryCell(call){
+ const code=countryCode(call);
+ if(!code)return 'Неизвестно';
+ const name=countryNames.of(code);
+ return `<img src="https://flagcdn.com/w20/${code.toLowerCase()}.png" width="20" height="15" alt="" loading="lazy" style="vertical-align:middle;object-fit:contain;margin-right:7px" onerror="this.style.display='none'">${safe(name)}`;
+}
 
 function color(km){return km>10000?'#ff405d':km>=6000?'#ff9b2f':km>=3000?'#f7e044':'#23ec72'}
 function setupMap(){
@@ -104,14 +111,14 @@ function render(){
  $('snr').textContent=spots.length?(spots.reduce((sum,s)=>sum+Number(s.snr),0)/spots.length).toFixed(1):'—';
  $('updated').textContent=source.updated_utc||'—';$('status').textContent=source.errors?.[hours]?'Внимание: данные могут быть устаревшими':'Данные загружены';
  drawMap(ranked,spots);
- $('mapRows').innerHTML=ranked.slice(0,20).map(s=>`<tr><td><b>${flag(s.rx_sign)} ${safe(s.rx_sign)}</b></td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${safe(time(s.time))}</td></tr>`).join('')||'<tr><td colspan="5">Нет данных</td></tr>';
+ $('mapRows').innerHTML=ranked.slice(0,20).map(s=>`<tr><td><b>${safe(s.rx_sign)}</b></td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${safe(time(s.time))}</td></tr>`).join('')||'<tr><td colspan="5">Нет данных</td></tr>';
  const bins=new Map(),maxima=new Map();for(const s of spots){const k=String(s.time).slice(0,13);bins.set(k,(bins.get(k)||0)+1);maxima.set(k,Math.max(maxima.get(k)||0,Number(s.distance)))}
  const keys=[...bins.keys()].sort();graph('hoursChart','bar',keys.map(k=>k.slice(5)),keys.map(k=>bins.get(k)),'Приёмы');
  graph('distanceChart','line',keys.map(k=>k.slice(5)),keys.map(k=>maxima.get(k)),'км');
  graph('topChart','bar',ranked.slice(0,10).map(s=>s.rx_sign),ranked.slice(0,10).map(s=>s.distance),'км');
- $('rows').innerHTML=spots.slice(0,100).map(s=>`<tr><td>${safe(time(s.time))}</td><td>${safe(s.band)} МГц</td><td>${flag(s.rx_sign)} ${safe(s.rx_sign)}</td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${(Number(s.frequency)/1e6).toFixed(6)} МГц</td><td>${safe(s.power)}</td></tr>`).join('')||'<tr><td colspan="8">Нет сообщений за выбранный период</td></tr>';
+ $('rows').innerHTML=spots.slice(0,100).map(s=>`<tr><td>${safe(time(s.time))}</td><td>${safe(s.band)} МГц</td><td>${safe(s.rx_sign)}</td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${(Number(s.frequency)/1e6).toFixed(6)} МГц</td><td>${safe(s.power)}</td><td>${countryCell(s.rx_sign)}</td></tr>`).join('')||'<tr><td colspan="9">Нет сообщений за выбранный период</td></tr>';
 }
-async function load(){try{const r=await fetch('data/spots.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);source=await r.json();render()}catch(e){$('status').textContent='Ошибка загрузки данных';$('rows').innerHTML='<tr><td colspan="8">Не удалось загрузить WSPR: '+safe(e.message)+'</td></tr>'}}
+async function load(){try{const r=await fetch('data/spots.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);source=await r.json();render()}catch(e){$('status').textContent='Ошибка загрузки данных';$('rows').innerHTML='<tr><td colspan="9">Не удалось загрузить WSPR: '+safe(e.message)+'</td></tr>'}}
 for(const id of ['period','band','distance','showLabels','showPaths'])$(id).addEventListener('change',render);
 $('reload').addEventListener('click',()=>location.reload());window.addEventListener('load',load);
 
