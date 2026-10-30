@@ -38,53 +38,14 @@ function countryCode(call){
 }
 function flag(call){const code=countryCode(call);if(!code)return '🌐';return [...code].map(ch=>String.fromCodePoint(127397+ch.charCodeAt(0))).join('')}
 
-const countryNames=new Intl.DisplayNames(['ru'],{type:'region'});
-function countryCell(call){
- const cc=countryCode(call);
- return cc?`<img class="country-flag" src="https://flagcdn.com/w40/${cc.toLowerCase()}.png" width="24" height="16" alt="Флаг ${safe(countryNames.of(cc))}" loading="lazy" onerror="this.style.display='none'"><span class="country-name">${safe(countryNames.of(cc))}</span>`:'<span class="country-name">Неизвестно</span>';
-}
 function color(km){return km>10000?'#ff405d':km>=6000?'#ff9b2f':km>=3000?'#f7e044':'#23ec72'}
 function setupMap(){
  if(map||!window.L)return;
  map=L.map('map',{worldCopyJump:true,preferCanvas:true,zoomSnap:.5}).setView([32,15],2.5);
- const baseMaps={
-  satellite:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Imagery © Esri, Maxar, Earthstar Geographics and contributors',maxZoom:12}),
-  street:L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:12}),
-  terrain:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',{attribution:'Topo © Esri and contributors',maxZoom:12})
- };
- let currentBase=baseMaps.satellite;
- currentBase.addTo(map);
- // Visible Google-Maps-style base map switcher; propagation overlays stay intact.
- const ViewSwitcher=L.Control.extend({
-  options:{position:'topright'},
-  onAdd:function(){
-   const container=L.DomUtil.create('div','wspr-map-views leaflet-bar');
-   container.setAttribute('role','group');
-   container.setAttribute('aria-label','Вид карты');
-   const options=[['satellite','Спутник'],['street','Карта'],['terrain','Рельеф']];
-   options.forEach(([key,label])=>{
-    const btn=L.DomUtil.create('button','wspr-map-view-btn',container);
-    btn.type='button';btn.textContent=label;btn.title='Показать: '+label.toLowerCase();
-    btn.setAttribute('aria-pressed',key==='satellite'?'true':'false');
-    btn.classList.toggle('active',key==='satellite');
-    L.DomEvent.on(btn,'click',e=>{
-     L.DomEvent.stop(e);
-     if(currentBase!==baseMaps[key]){
-      map.removeLayer(currentBase);currentBase=baseMaps[key];currentBase.addTo(map);
-      currentBase.bringToBack();
-     }
-     container.querySelectorAll('button').forEach(b=>{
-      const selected=b===btn;b.classList.toggle('active',selected);
-      b.setAttribute('aria-pressed',String(selected));
-     });
-    });
-   });
-   L.DomEvent.disableClickPropagation(container);
-   L.DomEvent.disableScrollPropagation(container);
-   return container;
-  }
- });
- map.addControl(new ViewSwitcher());
+ const satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles © Esri, Maxar, Earthstar Geographics and contributors',maxZoom:12});
+ const street=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:12});
+ satellite.addTo(map);
+ L.control.layers({'Спутник':satellite,'Обычная карта':street},null,{position:'topleft',collapsed:true}).addTo(map);
  paths=L.layerGroup().addTo(map);stations=L.layerGroup().addTo(map);
  setTimeout(()=>map.invalidateSize(),100);
 }
@@ -115,7 +76,7 @@ function drawMap(ranked,spots){
   const km=Number(s.distance),c=color(km),popup=`<b>${safe(s.rx_sign)}</b><br>${fmt(km)} км · SNR ${safe(s.snr)} дБ<br>${safe(s.rx_loc)} · ${safe(time(s.time))} UTC`;
   if(linesOn){
    const pts=arc(tx,rx);let segment=[];
-   const add=()=>{if(segment.length>1){L.polyline(segment,{color:'#07131d',weight:3.1,opacity:.82,interactive:false}).addTo(paths);L.polyline(segment,{color:c,weight:km>10000?2.2:1.6,opacity:.95}).bindPopup(popup).addTo(paths)}};
+   const add=()=>{if(segment.length>1){L.polyline(segment,{color:'#07131d',weight:3,opacity:.75,interactive:false}).addTo(paths);L.polyline(segment,{color:c,weight:km>10000?2.1:1.5,opacity:.9}).bindPopup(popup).addTo(paths)}};
    for(const p of pts){if(segment.length&&Math.abs(p[1]-segment[segment.length-1][1])>180){add();segment=[]}segment.push(p)}add();
   }
   const marker=L.circleMarker(rx,{radius:i<15?5:3.5,color:'#061a2c',weight:1.5,fillColor:c,fillOpacity:1}).bindPopup(popup).addTo(stations);
@@ -143,14 +104,14 @@ function render(){
  $('snr').textContent=spots.length?(spots.reduce((sum,s)=>sum+Number(s.snr),0)/spots.length).toFixed(1):'—';
  $('updated').textContent=source.updated_utc||'—';$('status').textContent=source.errors?.[hours]?'Внимание: данные могут быть устаревшими':'Данные загружены';
  drawMap(ranked,spots);
- $('mapRows').innerHTML=ranked.slice(0,20).map(s=>`<tr><td><b>${safe(s.rx_sign)}</b></td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${safe(time(s.time))}</td><td class="country-cell">${countryCell(s.rx_sign)}</td></tr>`).join('')||'<tr><td colspan="6">Нет данных</td></tr>';
+ $('mapRows').innerHTML=ranked.slice(0,20).map(s=>`<tr><td><b>${flag(s.rx_sign)} ${safe(s.rx_sign)}</b></td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${safe(time(s.time))}</td></tr>`).join('')||'<tr><td colspan="5">Нет данных</td></tr>';
  const bins=new Map(),maxima=new Map();for(const s of spots){const k=String(s.time).slice(0,13);bins.set(k,(bins.get(k)||0)+1);maxima.set(k,Math.max(maxima.get(k)||0,Number(s.distance)))}
  const keys=[...bins.keys()].sort();graph('hoursChart','bar',keys.map(k=>k.slice(5)),keys.map(k=>bins.get(k)),'Приёмы');
  graph('distanceChart','line',keys.map(k=>k.slice(5)),keys.map(k=>maxima.get(k)),'км');
  graph('topChart','bar',ranked.slice(0,10).map(s=>s.rx_sign),ranked.slice(0,10).map(s=>s.distance),'км');
- $('rows').innerHTML=spots.slice(0,100).map(s=>`<tr><td>${safe(time(s.time))}</td><td>${safe(s.band)} МГц</td><td>${safe(s.rx_sign)}</td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${(Number(s.frequency)/1e6).toFixed(6)} МГц</td><td>${safe(s.power)}</td><td class="country-cell">${countryCell(s.rx_sign)}</td></tr>`).join('')||'<tr><td colspan="9">Нет сообщений за выбранный период</td></tr>';
+ $('rows').innerHTML=spots.slice(0,100).map(s=>`<tr><td>${safe(time(s.time))}</td><td>${safe(s.band)} МГц</td><td>${flag(s.rx_sign)} ${safe(s.rx_sign)}</td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${(Number(s.frequency)/1e6).toFixed(6)} МГц</td><td>${safe(s.power)}</td></tr>`).join('')||'<tr><td colspan="8">Нет сообщений за выбранный период</td></tr>';
 }
-async function load(){try{const r=await fetch('data/spots.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);source=await r.json();render()}catch(e){$('status').textContent='Ошибка загрузки данных';$('rows').innerHTML='<tr><td colspan="9">Не удалось загрузить WSPR: '+safe(e.message)+'</td></tr>'}}
+async function load(){try{const r=await fetch('data/spots.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);source=await r.json();render()}catch(e){$('status').textContent='Ошибка загрузки данных';$('rows').innerHTML='<tr><td colspan="8">Не удалось загрузить WSPR: '+safe(e.message)+'</td></tr>'}}
 for(const id of ['period','band','distance','showLabels','showPaths'])$(id).addEventListener('change',render);
 $('reload').addEventListener('click',()=>location.reload());window.addEventListener('load',load);
 
