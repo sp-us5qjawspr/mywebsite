@@ -111,7 +111,7 @@ function render(){
  $('snr').textContent=spots.length?(spots.reduce((sum,s)=>sum+Number(s.snr),0)/spots.length).toFixed(1):'—';
  $('updated').textContent=source.updated_utc||'—';$('status').textContent=source.errors?.[hours]?'Внимание: данные могут быть устаревшими':'Данные загружены';
  drawMap(ranked,spots);
- $('mapRows').innerHTML=ranked.slice(0,20).map(s=>`<tr><td><b>${safe(s.rx_sign)}</b></td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${safe(time(s.time))}</td></tr>`).join('')||'<tr><td colspan="5">Нет данных</td></tr>';
+ $('mapRows').innerHTML=ranked.slice(0,20).map(s=>`<tr><td><b>${safe(s.rx_sign)}</b></td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${safe(time(s.time))}</td><td>${countryCell(s.rx_sign)}</td></tr>`).join('')||'<tr><td colspan="6">Нет данных</td></tr>';
  const bins=new Map(),maxima=new Map();for(const s of spots){const k=String(s.time).slice(0,13);bins.set(k,(bins.get(k)||0)+1);maxima.set(k,Math.max(maxima.get(k)||0,Number(s.distance)))}
  const keys=[...bins.keys()].sort();graph('hoursChart','bar',keys.map(k=>k.slice(5)),keys.map(k=>bins.get(k)),'Приёмы');
  graph('distanceChart','line',keys.map(k=>k.slice(5)),keys.map(k=>maxima.get(k)),'км');
