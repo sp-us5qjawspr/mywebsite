@@ -1,17 +1,14 @@
-SP/US5QJA WSPR Monitor — переключение вида карты
+SP/US5QJA — смена адреса сайта (без замены карты, графиков и данных)
 
-Добавлены кнопки в правом верхнем углу карты:
-  Спутник — Esri World Imagery
-  Карта — OpenStreetMap
-  Рельеф — Esri World Topo Map
+Новый адрес: https://sp-us5qjawspr.github.io/mywebsite/
 
-Сохраняются WSPR-линии, точки, позывные, фильтры, графики и флаги в таблицах.
+1. Загрузите в корень репозитория mywebsite два файла:
+   site-links.js
+   qr-site.png
+2. Откройте index.html в редакторе GitHub и ДОБАВЬТЕ перед </body> строку:
+   <script src="site-links.js?v=1" defer></script>
+3. Commit changes; дождитесь публикации и нажмите Ctrl+Shift+R.
 
-Загрузите в корень репозитория airbuss09/mywebsite:
-  index.html
-  app.js
-  style.css
-
-Не удаляйте update.py, .github/workflows, data/ и qr-site.png.
-После Commit changes дождитесь успешного GitHub Actions и обновите сайт Ctrl+Shift+R.
-Карты требуют подключения к интернету и доступности Esri/OpenStreetMap.
+Важно: НЕ заменяйте существующие app.js, style.css, update.py и workflow.
+Скрипт исправляет ссылки, кнопку Поделиться и адрес счетчика просмотров.
+Счетчик по новому адресу может начать отсчет отдельно от старого.
