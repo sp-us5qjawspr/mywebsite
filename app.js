@@ -6,6 +6,38 @@ const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'
 const time=s=>String(s||'').slice(0,16);
 const coord=(lat,lon)=>[Number(lat),Number(lon)];
 const valid=p=>p.every(Number.isFinite)&&Math.abs(p[0])<=90&&Math.abs(p[1])<=180;
+
+// Flags are inferred from standard amateur-radio callsign prefixes.
+// Portable operation and special calls may differ; unknown calls use a globe.
+const PREFIX_FLAGS=[
+ ['VK','AU'],['AX','AU'],['VL','AU'],['ZL','NZ'],['V5','NA'],['ZS','ZA'],['ZR','ZA'],['ZT','ZA'],['ZU','ZA'],
+ ['EA8','ES'],['EA6','ES'],['EA9','ES'],['EA','ES'],['EB','ES'],['EC','ES'],['ED','ES'],
+ ['CT3','PT'],['CT','PT'],['CS','PT'],['CR','PT'],['CU','PT'],['EI','IE'],['EJ','IE'],
+ ['GM','GB'],['MM','GB'],['GW','GB'],['MW','GB'],['GI','GB'],['MI','GB'],['G','GB'],['M','GB'],['2E','GB'],['2M','GB'],['2W','GB'],['2I','GB'],
+ ['SP','PL'],['SQ','PL'],['SN','PL'],['SO','PL'],['HF','PL'],['3Z','PL'],
+ ['DL','DE'],['DA','DE'],['DB','DE'],['DC','DE'],['DD','DE'],['DF','DE'],['DG','DE'],['DH','DE'],['DJ','DE'],['DK','DE'],['DM','DE'],['DN','DE'],['DO','DE'],['DP','DE'],['DQ','DE'],['DR','DE'],
+ ['F','FR'],['TM','FR'],['TK','FR'],['HB','CH'],['HE','CH'],['OE','AT'],['ON','BE'],['OO','BE'],['OP','BE'],['OQ','BE'],['OR','BE'],['OS','BE'],['OT','BE'],
+ ['PA','NL'],['PB','NL'],['PC','NL'],['PD','NL'],['PE','NL'],['PF','NL'],['PG','NL'],['PH','NL'],['PI','NL'],
+ ['SM','SE'],['SA','SE'],['SB','SE'],['SC','SE'],['SD','SE'],['SE','SE'],['SF','SE'],['SG','SE'],['SH','SE'],['SI','SE'],['SJ','SE'],['SK','SE'],['SL','SE'],['7S','SE'],['8S','SE'],
+ ['LA','NO'],['LB','NO'],['LC','NO'],['LD','NO'],['LE','NO'],['LF','NO'],['LG','NO'],['LI','NO'],['LJ','NO'],['LK','NO'],['LL','NO'],['LM','NO'],['LN','NO'],
+ ['OH','FI'],['OF','FI'],['OG','FI'],['OI','FI'],['OJ','FI'],['OM','SK'],['OK','CZ'],['OL','CZ'],
+ ['OZ','DK'],['OU','DK'],['OV','DK'],['OW','DK'],['OX','GL'],['OY','FO'],['TF','IS'],['ES','EE'],['YL','LV'],['LY','LT'],
+ ['I','IT'],['IK','IT'],['IZ','IT'],['IU','IT'],['IS0','IT'],['9A','HR'],['S5','SI'],['YU','RS'],['YT','RS'],['E7','BA'],['4O','ME'],['ZA','AL'],['Z3','MK'],['SV','GR'],['SX','GR'],['J4','GR'],['LZ','BG'],['YO','RO'],['YR','RO'],['YP','RO'],['YQ','RO'],['UR','UA'],['US','UA'],['UT','UA'],['UU','UA'],['UV','UA'],['UW','UA'],['UX','UA'],['UY','UA'],['UZ','UA'],['EM','UA'],['EN','UA'],['EO','UA'],
+ ['JA','JP'],['JE','JP'],['JF','JP'],['JG','JP'],['JH','JP'],['JI','JP'],['JJ','JP'],['JK','JP'],['JL','JP'],['JM','JP'],['JN','JP'],['JO','JP'],['JP','JP'],['JQ','JP'],['JR','JP'],['JS','JP'],['7J','JP'],['7K','JP'],['7L','JP'],['7M','JP'],['7N','JP'],['8J','JP'],['8K','JP'],['8L','JP'],['8M','JP'],['8N','JP'],
+ ['BY','CN'],['BG','CN'],['BH','CN'],['BI','CN'],['BD','CN'],['BA','CN'],['VR','HK'],['BV','TW'],['BU','TW'],['BX','TW'],['HL','KR'],['DS','KR'],['6K','KR'],['6L','KR'],['6M','KR'],['6N','KR'],['9V','SG'],['HS','TH'],['E2','TH'],['DU','PH'],['DW','PH'],['DX','PH'],['DY','PH'],['YB','ID'],['YC','ID'],['YD','ID'],['YE','ID'],['YF','ID'],['YG','ID'],['YH','ID'],['9M','MY'],['9W','MY'],['VU','IN'],['AP','PK'],['9K','KW'],['A4','OM'],['A6','AE'],['A7','QA'],['HZ','SA'],['7Z','SA'],['4X','IL'],['4Z','IL'],['TA','TR'],['TB','TR'],['TC','TR'],['YM','TR'],
+ ['K','US'],['N','US'],['W','US'],['AA','US'],['AB','US'],['AC','US'],['AD','US'],['AE','US'],['AF','US'],['AG','US'],['AI','US'],['AJ','US'],['AK','US'],['AL','US'],
+ ['VA','CA'],['VE','CA'],['VO','CA'],['VY','CA'],['CF','CA'],['CG','CA'],['CH','CA'],['CI','CA'],['CJ','CA'],['CK','CA'],['CY','CA'],
+ ['LU','AR'],['LW','AR'],['PY','BR'],['PP','BR'],['PQ','BR'],['PR','BR'],['PS','BR'],['PT','BR'],['PU','BR'],['PV','BR'],['PW','BR'],['PX','BR'],['ZP','PY'],['CX','UY'],['CE','CL'],['CA','CL'],['CB','CL'],['CD','CL'],['OA','PE'],['HC','EC'],['HK','CO'],['HJ','CO'],['YV','VE'],['YY','VE'],['CP','BO'],['HP','PA'],['TI','CR'],['TG','GT'],['XE','MX'],['XF','MX'],['XG','MX'],['4A','MX'],['4B','MX'],['4C','MX'],
+ ['5Z','KE'],['5H','TZ'],['5N','NG'],['5R','MG'],['3B8','MU'],['FR','RE'],['CN','MA'],['5X','UG'],['9J','ZM'],['7Q','MW'],['A2','BW'],['3DA','SZ'],['C5','GM'],['9G','GH'],['SU','EG'],['ST','SD'],['ET','ET']
+].sort((a,b)=>b[0].length-a[0].length);
+function countryCode(call){
+ const parts=String(call||'').toUpperCase().split('/').filter(Boolean);
+ // Prefer an explicit operating prefix in slash calls (e.g. EA8/DF4UE).
+ const candidate=(parts.length>1&&parts[0].length<=4)?parts[0]:parts[0]||'';
+ const match=PREFIX_FLAGS.find(([p])=>candidate.startsWith(p));return match?match[1]:null;
+}
+function flag(call){const code=countryCode(call);if(!code)return '🌐';return [...code].map(ch=>String.fromCodePoint(127397+ch.charCodeAt(0))).join('')}
+
 function color(km){return km>10000?'#ff405d':km>=6000?'#ff9b2f':km>=3000?'#f7e044':'#23ec72'}
 function setupMap(){
  if(map||!window.L)return;
@@ -44,7 +76,7 @@ function drawMap(ranked,spots){
   const km=Number(s.distance),c=color(km),popup=`<b>${safe(s.rx_sign)}</b><br>${fmt(km)} км · SNR ${safe(s.snr)} дБ<br>${safe(s.rx_loc)} · ${safe(time(s.time))} UTC`;
   if(linesOn){
    const pts=arc(tx,rx);let segment=[];
-   const add=()=>{if(segment.length>1){L.polyline(segment,{color:'#07131d',weight:5,opacity:.9,interactive:false}).addTo(paths);L.polyline(segment,{color:c,weight:km>10000?3.2:2.3,opacity:.95}).bindPopup(popup).addTo(paths)}};
+   const add=()=>{if(segment.length>1){L.polyline(segment,{color:'#07131d',weight:3,opacity:.75,interactive:false}).addTo(paths);L.polyline(segment,{color:c,weight:km>10000?2.1:1.5,opacity:.9}).bindPopup(popup).addTo(paths)}};
    for(const p of pts){if(segment.length&&Math.abs(p[1]-segment[segment.length-1][1])>180){add();segment=[]}segment.push(p)}add();
   }
   const marker=L.circleMarker(rx,{radius:i<15?5:3.5,color:'#061a2c',weight:1.5,fillColor:c,fillOpacity:1}).bindPopup(popup).addTo(stations);
@@ -72,12 +104,12 @@ function render(){
  $('snr').textContent=spots.length?(spots.reduce((sum,s)=>sum+Number(s.snr),0)/spots.length).toFixed(1):'—';
  $('updated').textContent=source.updated_utc||'—';$('status').textContent=source.errors?.[hours]?'Внимание: данные могут быть устаревшими':'Данные загружены';
  drawMap(ranked,spots);
- $('mapRows').innerHTML=ranked.slice(0,20).map(s=>`<tr><td><b>${safe(s.rx_sign)}</b></td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${safe(time(s.time))}</td></tr>`).join('')||'<tr><td colspan="5">Нет данных</td></tr>';
+ $('mapRows').innerHTML=ranked.slice(0,20).map(s=>`<tr><td><b>${flag(s.rx_sign)} ${safe(s.rx_sign)}</b></td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${safe(time(s.time))}</td></tr>`).join('')||'<tr><td colspan="5">Нет данных</td></tr>';
  const bins=new Map(),maxima=new Map();for(const s of spots){const k=String(s.time).slice(0,13);bins.set(k,(bins.get(k)||0)+1);maxima.set(k,Math.max(maxima.get(k)||0,Number(s.distance)))}
  const keys=[...bins.keys()].sort();graph('hoursChart','bar',keys.map(k=>k.slice(5)),keys.map(k=>bins.get(k)),'Приёмы');
  graph('distanceChart','line',keys.map(k=>k.slice(5)),keys.map(k=>maxima.get(k)),'км');
  graph('topChart','bar',ranked.slice(0,10).map(s=>s.rx_sign),ranked.slice(0,10).map(s=>s.distance),'км');
- $('rows').innerHTML=spots.slice(0,100).map(s=>`<tr><td>${safe(time(s.time))}</td><td>${safe(s.band)} МГц</td><td>${safe(s.rx_sign)}</td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${(Number(s.frequency)/1e6).toFixed(6)} МГц</td><td>${safe(s.power)}</td></tr>`).join('')||'<tr><td colspan="8">Нет сообщений за выбранный период</td></tr>';
+ $('rows').innerHTML=spots.slice(0,100).map(s=>`<tr><td>${safe(time(s.time))}</td><td>${safe(s.band)} МГц</td><td>${flag(s.rx_sign)} ${safe(s.rx_sign)}</td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${(Number(s.frequency)/1e6).toFixed(6)} МГц</td><td>${safe(s.power)}</td></tr>`).join('')||'<tr><td colspan="8">Нет сообщений за выбранный период</td></tr>';
 }
 async function load(){try{const r=await fetch('data/spots.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);source=await r.json();render()}catch(e){$('status').textContent='Ошибка загрузки данных';$('rows').innerHTML='<tr><td colspan="8">Не удалось загрузить WSPR: '+safe(e.message)+'</td></tr>'}}
 for(const id of ['period','band','distance','showLabels','showPaths'])$(id).addEventListener('change',render);
