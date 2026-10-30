@@ -13,7 +13,9 @@
       #radio-guestbook-button:hover{background:#087da9}
       #radio-guestbook-panel{position:fixed;z-index:9999;top:100px;right:24px;width:min(720px,calc(100vw - 32px));max-height:calc(100vh - 120px);overflow:auto;box-sizing:border-box;padding:16px;background:#0a2039;border:1px solid #2b6384;border-radius:12px;box-shadow:0 14px 48px #0009;color:#e5f4ff}
       #radio-guestbook-panel[hidden]{display:none!important}
-      #radio-guestbook-panel .rg-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+      #radio-guestbook-panel .rg-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;cursor:grab;user-select:none;touch-action:none}
+      #radio-guestbook-panel .rg-header:active{cursor:grabbing}
+      #radio-guestbook-panel .rg-close{cursor:pointer;touch-action:auto}
       #radio-guestbook-panel h2{font-size:20px;margin:0;color:#fff}
       #radio-guestbook-panel .rg-close{border:1px solid #47738d;border-radius:6px;background:#143a55;color:white;padding:6px 11px;cursor:pointer;font-size:20px}
       #radio-guestbook-panel .rg-note{font-size:13px;color:#b9d5e7;margin:0 0 16px}
@@ -36,6 +38,40 @@
     panel.innerHTML = '<div class="rg-header"><h2>📻 Общение / Radio Guestbook</h2><button class="rg-close" type="button" aria-label="Закрыть гостевую книгу">×</button></div><p class="rg-note">Добро пожаловать! Оставьте позывной, локатор и сообщение. Для отправки нужен аккаунт GitHub. 73!</p><div id="radio-guestbook-comments"></div>';
     document.body.appendChild(panel);
 
+    // Drag the panel by its header; keep the window visible in the viewport.
+    const header = panel.querySelector('.rg-header');
+    let drag = null;
+    const clamp = (value, low, high) => Math.max(low, Math.min(value, high));
+    header.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0 || event.target.closest('button, a, input')) return;
+      const rect = panel.getBoundingClientRect();
+      drag = {id: event.pointerId, dx: event.clientX - rect.left, dy: event.clientY - rect.top};
+      panel.style.left = rect.left + 'px';
+      panel.style.top = rect.top + 'px';
+      panel.style.right = 'auto';
+      header.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+    header.addEventListener('pointermove', (event) => {
+      if (!drag || drag.id !== event.pointerId) return;
+      const width = panel.getBoundingClientRect().width;
+      const height = panel.getBoundingClientRect().height;
+      panel.style.left = clamp(event.clientX - drag.dx, 0, Math.max(0, innerWidth - width)) + 'px';
+      panel.style.top = clamp(event.clientY - drag.dy, 0, Math.max(0, innerHeight - Math.min(height, innerHeight))) + 'px';
+    });
+    const endDrag = (event) => {
+      if (!drag || drag.id !== event.pointerId) return;
+      drag = null;
+      if (header.hasPointerCapture(event.pointerId)) header.releasePointerCapture(event.pointerId);
+    };
+    header.addEventListener('pointerup', endDrag);
+    header.addEventListener('pointercancel', endDrag);
+    window.addEventListener('resize', () => {
+      if (panel.hidden || !panel.style.left) return;
+      const rect = panel.getBoundingClientRect();
+      panel.style.left = clamp(rect.left, 0, Math.max(0, innerWidth - rect.width)) + 'px';
+      panel.style.top = clamp(rect.top, 0, Math.max(0, innerHeight - Math.min(rect.height, innerHeight))) + 'px';
+    });
     let loaded = false;
     const close = () => {panel.hidden = true;btn.setAttribute('aria-expanded','false');};
     btn.addEventListener('click', () => {
@@ -43,7 +79,7 @@
       panel.hidden = false;
       btn.setAttribute('aria-expanded','true');
       const rect = btn.getBoundingClientRect();
-      if (window.innerWidth > 700) panel.style.top = Math.max(8,Math.min(rect.bottom + 10,window.innerHeight - 180))+'px';
+      if (!panel.style.left && window.innerWidth > 700) panel.style.top = Math.max(8,Math.min(rect.bottom + 10,window.innerHeight - 180))+'px';
       if (!loaded) {
         loaded = true;
         const script = document.createElement('script');
