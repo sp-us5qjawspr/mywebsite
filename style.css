@@ -81,3 +81,8 @@ header p{font-size:12px;color:#c0d4e8}
 /* Compact receiving callsigns, transmitter unchanged */
 .wspr-label:not(.tx){font-size:9px;line-height:1.05;padding:2px 4px;border-width:1px;border-radius:4px}
 .country-cell{white-space:nowrap;font-size:12px}
+
+/* Real flag images, not Unicode regional-indicator letters */
+.country-cell{white-space:nowrap;text-align:left;vertical-align:middle;font-size:13px}
+.country-flag{display:inline-block;width:24px;height:16px;object-fit:cover;vertical-align:middle;margin-right:9px;border-radius:2px;box-shadow:0 0 0 1px #51677a}
+.country-name{vertical-align:middle}

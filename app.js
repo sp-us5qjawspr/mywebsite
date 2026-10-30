@@ -41,7 +41,7 @@ function flag(call){const code=countryCode(call);if(!code)return '🌐';return [
 const countryNames=new Intl.DisplayNames(['ru'],{type:'region'});
 function countryCell(call){
  const cc=countryCode(call);
- return cc?`${flag(call)} ${safe(countryNames.of(cc))}`:'🌐 Неизвестно';
+ return cc?`<img class="country-flag" src="https://flagcdn.com/w40/${cc.toLowerCase()}.png" width="24" height="16" alt="Флаг ${safe(countryNames.of(cc))}" loading="lazy" onerror="this.style.display='none'"><span class="country-name">${safe(countryNames.of(cc))}</span>`:'<span class="country-name">Неизвестно</span>';
 }
 function color(km){return km>10000?'#ff405d':km>=6000?'#ff9b2f':km>=3000?'#f7e044':'#23ec72'}
 function setupMap(){
@@ -78,7 +78,7 @@ function drawMap(ranked,spots){
  // One marker and path per unique receiver; cap for map readability.
  ranked.slice(0,220).forEach((s,i)=>{
   const rx=coord(s.rx_lat,s.rx_lon);if(!valid(rx))return;
-  const km=Number(s.distance),c=color(km),popup=`<b>${flag(s.rx_sign)} ${safe(s.rx_sign)}</b><br>${fmt(km)} км · SNR ${safe(s.snr)} дБ<br>${safe(s.rx_loc)} · ${safe(time(s.time))} UTC`;
+  const km=Number(s.distance),c=color(km),popup=`<b>${safe(s.rx_sign)}</b><br>${fmt(km)} км · SNR ${safe(s.snr)} дБ<br>${safe(s.rx_loc)} · ${safe(time(s.time))} UTC`;
   if(linesOn){
    const pts=arc(tx,rx);let segment=[];
    const add=()=>{if(segment.length>1){L.polyline(segment,{color:'#07131d',weight:3.1,opacity:.82,interactive:false}).addTo(paths);L.polyline(segment,{color:c,weight:km>10000?2.2:1.6,opacity:.95}).bindPopup(popup).addTo(paths)}};
