@@ -38,6 +38,11 @@ function countryCode(call){
 }
 function flag(call){const code=countryCode(call);if(!code)return '🌐';return [...code].map(ch=>String.fromCodePoint(127397+ch.charCodeAt(0))).join('')}
 
+const countryNames=new Intl.DisplayNames(['ru'],{type:'region'});
+function countryCell(call){
+ const cc=countryCode(call);
+ return cc?`${flag(call)} ${safe(countryNames.of(cc))}`:'🌐 Неизвестно';
+}
 function color(km){return km>10000?'#ff405d':km>=6000?'#ff9b2f':km>=3000?'#f7e044':'#23ec72'}
 function setupMap(){
  if(map||!window.L)return;
@@ -73,10 +78,10 @@ function drawMap(ranked,spots){
  // One marker and path per unique receiver; cap for map readability.
  ranked.slice(0,220).forEach((s,i)=>{
   const rx=coord(s.rx_lat,s.rx_lon);if(!valid(rx))return;
-  const km=Number(s.distance),c=color(km),popup=`<b>${safe(s.rx_sign)}</b><br>${fmt(km)} км · SNR ${safe(s.snr)} дБ<br>${safe(s.rx_loc)} · ${safe(time(s.time))} UTC`;
+  const km=Number(s.distance),c=color(km),popup=`<b>${flag(s.rx_sign)} ${safe(s.rx_sign)}</b><br>${fmt(km)} км · SNR ${safe(s.snr)} дБ<br>${safe(s.rx_loc)} · ${safe(time(s.time))} UTC`;
   if(linesOn){
    const pts=arc(tx,rx);let segment=[];
-   const add=()=>{if(segment.length>1){L.polyline(segment,{color:'#07131d',weight:3,opacity:.75,interactive:false}).addTo(paths);L.polyline(segment,{color:c,weight:km>10000?2.1:1.5,opacity:.9}).bindPopup(popup).addTo(paths)}};
+   const add=()=>{if(segment.length>1){L.polyline(segment,{color:'#07131d',weight:3.1,opacity:.82,interactive:false}).addTo(paths);L.polyline(segment,{color:c,weight:km>10000?2.2:1.6,opacity:.95}).bindPopup(popup).addTo(paths)}};
    for(const p of pts){if(segment.length&&Math.abs(p[1]-segment[segment.length-1][1])>180){add();segment=[]}segment.push(p)}add();
   }
   const marker=L.circleMarker(rx,{radius:i<15?5:3.5,color:'#061a2c',weight:1.5,fillColor:c,fillOpacity:1}).bindPopup(popup).addTo(stations);
@@ -104,14 +109,14 @@ function render(){
  $('snr').textContent=spots.length?(spots.reduce((sum,s)=>sum+Number(s.snr),0)/spots.length).toFixed(1):'—';
  $('updated').textContent=source.updated_utc||'—';$('status').textContent=source.errors?.[hours]?'Внимание: данные могут быть устаревшими':'Данные загружены';
  drawMap(ranked,spots);
- $('mapRows').innerHTML=ranked.slice(0,20).map(s=>`<tr><td><b>${flag(s.rx_sign)} ${safe(s.rx_sign)}</b></td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${safe(time(s.time))}</td></tr>`).join('')||'<tr><td colspan="5">Нет данных</td></tr>';
+ $('mapRows').innerHTML=ranked.slice(0,20).map(s=>`<tr><td><b>${safe(s.rx_sign)}</b></td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${safe(time(s.time))}</td><td class="country-cell">${countryCell(s.rx_sign)}</td></tr>`).join('')||'<tr><td colspan="6">Нет данных</td></tr>';
  const bins=new Map(),maxima=new Map();for(const s of spots){const k=String(s.time).slice(0,13);bins.set(k,(bins.get(k)||0)+1);maxima.set(k,Math.max(maxima.get(k)||0,Number(s.distance)))}
  const keys=[...bins.keys()].sort();graph('hoursChart','bar',keys.map(k=>k.slice(5)),keys.map(k=>bins.get(k)),'Приёмы');
  graph('distanceChart','line',keys.map(k=>k.slice(5)),keys.map(k=>maxima.get(k)),'км');
  graph('topChart','bar',ranked.slice(0,10).map(s=>s.rx_sign),ranked.slice(0,10).map(s=>s.distance),'км');
- $('rows').innerHTML=spots.slice(0,100).map(s=>`<tr><td>${safe(time(s.time))}</td><td>${safe(s.band)} МГц</td><td>${flag(s.rx_sign)} ${safe(s.rx_sign)}</td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${(Number(s.frequency)/1e6).toFixed(6)} МГц</td><td>${safe(s.power)}</td></tr>`).join('')||'<tr><td colspan="8">Нет сообщений за выбранный период</td></tr>';
+ $('rows').innerHTML=spots.slice(0,100).map(s=>`<tr><td>${safe(time(s.time))}</td><td>${safe(s.band)} МГц</td><td>${safe(s.rx_sign)}</td><td>${safe(s.rx_loc)}</td><td>${fmt(s.distance)} км</td><td>${safe(s.snr)} дБ</td><td>${(Number(s.frequency)/1e6).toFixed(6)} МГц</td><td>${safe(s.power)}</td><td class="country-cell">${countryCell(s.rx_sign)}</td></tr>`).join('')||'<tr><td colspan="9">Нет сообщений за выбранный период</td></tr>';
 }
-async function load(){try{const r=await fetch('data/spots.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);source=await r.json();render()}catch(e){$('status').textContent='Ошибка загрузки данных';$('rows').innerHTML='<tr><td colspan="8">Не удалось загрузить WSPR: '+safe(e.message)+'</td></tr>'}}
+async function load(){try{const r=await fetch('data/spots.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);source=await r.json();render()}catch(e){$('status').textContent='Ошибка загрузки данных';$('rows').innerHTML='<tr><td colspan="9">Не удалось загрузить WSPR: '+safe(e.message)+'</td></tr>'}}
 for(const id of ['period','band','distance','showLabels','showPaths'])$(id).addEventListener('change',render);
 $('reload').addEventListener('click',()=>location.reload());window.addEventListener('load',load);
 
